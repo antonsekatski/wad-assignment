@@ -3,7 +3,9 @@ import ReactDOM from 'react-dom'
 import { observable, action, runInAction } from 'mobx'
 import { observer } from 'mobx-react'
 import { DateTime } from 'luxon'
+import DatePicker from 'react-datepicker'
 import validator from 'validator'
+import moment from 'moment'
 require('fetch')
 
 let reactKey = 0
@@ -38,19 +40,138 @@ class TimetableStore {
     // Convert to JSON
     const result = await resp.json()
 
+    if (result.length === 0) {
+      runInAction(() => {
+        this.classes = []
+        this.loading = false
+      })
+
+      return
+    }
+    const firstDate = DateTime.fromMillis(result[0].start_at)
+
+    let weekNumber = firstDate.weekNumber
+    let final = []
+    let week = createWeekObject(firstDate)
+
+    for (let i = 0; i < result.length; i++) {
+      const item = result[i]
+
+      const now = DateTime.fromMillis(item.start_at)
+
+      if (weekNumber !== now.weekNumber) {
+        week.days = week.days.filter(x => x)
+
+        final.push({...week})
+
+        week = createWeekObject(now)
+        weekNumber = now.weekNumber
+      }
+
+      if (!week.days[now.weekday]) {
+        week.days[now.weekday] = {
+          weekLong: now.weekdayLong,
+          date: now.toLocaleString(DateTime.DATE_FULL),
+          classes: []
+        }
+      }
+
+      week.days[now.weekday].classes.push(item)
+    }
+
+    week.days = week.days.filter(x => x)
+    final.push({...week})
+
+    console.log(final)
+
     // Save it in Store
     runInAction(() => {
-      this.classes = result
+      this.classes = final
       this.loading = false
     })
   }
 
+  @action
+  async create(data) {
+    // Get from server
+    const resp = await fetch(`${location.protocol}//${location.host}/api/classes/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+
+    new Noty({
+      type: 'success',
+      text: 'Created!',
+      timeout: 2000,
+    }).show()
+
+    await this.fetch()
+
+    return true
+  }
+
+  @action
+  async setFull(id) {
+    // Get from server
+    const resp = await fetch(`${location.protocol}//${location.host}/api/classes/full`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ id })
+    })
+    
+    // this.classes.find(x => x._id === id).is_full = true
+
+    // this.classes.forEach(week => {
+    //   week.days.forEach(weekday => {
+    //     const elem = weekday.classes.find(x => x._id === id)
+
+    //     if (elem) {
+    //       elem.is_full = true
+    //     }
+    //   })
+    // })
+
+    new Noty({
+      type: 'success',
+      text: 'Now full!',
+      timeout: 2000,
+    }).show()
+
+    this.fetch()
+  }
+
+  @action
+  async delete(id) {
+    // Get from server
+    const resp = await fetch(`${location.protocol}//${location.host}/api/classes`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ id })
+    })
+
+    // this.classes.splice(this.classes.findIndex(x => x._id === id), 1)
+
+    new Noty({
+      type: 'success',
+      text: 'Removed!',
+      timeout: 2000,
+    }).show()
+
+    this.fetch()
+  }
 
   // Modals
   @observable modal = null
 
-  openLoginModal() {
-    this.modal = LoginSignUpModal
+  openCreate() {
+    this.modal = CreateModal
   }
 
   closeModal() {
@@ -63,80 +184,14 @@ const store = new TimetableStore()
 // Main Application
 @observer
 class App extends React.Component {
-  componentDidMount() {
-    store.getUser()
-  }
-
-  logout = (ev) => {
-    ev.preventDefault()
-
-    store.logout()
-  }
-
   render() {
     return (
       <div>
-        <h1 className="title is-1">Lesson Schedule
-        &nbsp;&nbsp;
-        {store.user ? <span className="tag is-info">{store.user.email}</span> : null}
-        &nbsp;&nbsp;
-        {store.user ? <span className="tag is-danger logout" onClick={this.logout}>Log Out</span> : null}
-        </h1>
-
-        <Filters />
+        <h1 className="title is-1">Admin Dashboard</h1>
 
         <Classes />
 
         <Modals />
-
-      </div>
-    )
-  }
-}
-
-// Filters component
-@observer
-class Filters extends React.Component {
-  onChange = (name, value) => {
-    store[name] = value
-    store.fetch()
-  }
-
-  render() {
-    return (
-      <div className="columns">
-
-        <div className="column is-2">
-          <div className="field">
-            <label className="label">Yoga style</label>
-            <div className="control">
-              <div className="select">
-                <select onChange={(ev) => this.onChange('style', ev.target.value)}>
-                  <option value="">All styles</option>
-                  <option value="Hatha">Hatha</option>
-                  <option value="Ashtanga">Ashtanga</option>
-                  <option value="Vinyasa">Vinyasa</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="column">
-          <div className="field">
-            <label className="label">Instructor</label>
-            <div className="control">
-              <div className="select">
-                <select onChange={(ev) => this.onChange('instructor', ev.target.value)}>
-                  <option value="">All instructors</option>
-                  <option value="Elon Musk">Elon Musk</option>
-                  <option value="Richard Branson">Richard Branson</option>
-                  <option value="Warren Buffet">Warren Buffet</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
 
       </div>
     )
@@ -150,6 +205,12 @@ class Classes extends React.Component {
     store.fetch()
   }
 
+  newClass = (ev) => {
+    ev.preventDefault()
+
+    store.openCreate()
+  }
+
   render() {
     if (store.loading) { return <div className="loading">Loading...</div> }
 
@@ -157,6 +218,10 @@ class Classes extends React.Component {
 
     return (
       <div>
+        <button className="button is-success" onClick={this.newClass}>Add new Class</button>
+
+        <p>&nbsp;</p>
+
         {store.classes.map(x => <Week key={reactKey++} week={x} />)}
       </div>
     )
@@ -193,6 +258,7 @@ class Weekday extends React.Component {
               <th className="class-time">Time</th>
               <th className="class-style">Yoga Style</th>
               <th>Instructor</th>
+              <th>Participants</th>
               <th></th>
             </tr>
           </thead>
@@ -214,16 +280,16 @@ class Class extends React.Component {
     store.openLoginModal()
   }
 
-  reserve = (ev) => {
-    ev.preventDefault()
-
-    store.reserve(this.props.item._id)
-  }
-
-  cancel = (ev) => {
+  setFull = (ev) => {
     ev.preventDefault()
     
-    store.cancelReservation(this.props.item._id)
+    store.setFull(this.props.item._id)
+  }
+
+  delete = (ev) => {
+    ev.preventDefault()
+    
+    store.delete(this.props.item._id)
   }
 
   render() {
@@ -232,39 +298,17 @@ class Class extends React.Component {
     const now = DateTime.fromMillis(item.start_at)
     const start = now.toLocaleString(DateTime.TIME_SIMPLE)
     const end = now.plus({ minutes: item.duration }).toLocaleString(DateTime.TIME_SIMPLE)
-
-    let buttonComponent = null
-
-    if (store.user) {
-      if (item.users.indexOf(store.user.id) > -1) {
-        buttonComponent = (
-          <button className={`button is-warning ${store.reserving === item._id ? 'is-loading' : ''}`} onClick={this.cancel}>Reserved!</button>
-        )
-      } else {
-        if (item.is_full) {
-          buttonComponent = (
-            <button className={`button is-danger`}>Class is full</button>
-          )
-        } else {
-          buttonComponent = (
-            <button className={`button is-success ${store.reserving === item._id ? 'is-loading' : ''}`} onClick={this.reserve}>Reserve</button>
-          )
-        }
-        
-      }
-    } else {
-      buttonComponent = (
-        <button className="button is-success" onClick={this.openModal}>Login to Reserve</button>
-      )
-    }
     
     return (
       <tr className={`${item.is_full ? 'full-class' : ''}`}>
         <td>{start} - {end}</td>
         <td>{item.style}</td>
         <td>{item.instructor}</td>
+        <td>{item.users.length}</td>
         <td className="class-reserve">
-          {buttonComponent}
+          {!item.is_full ? <button className={`button is-success ${store.reserving === item._id ? 'is-loading' : ''}`} onClick={this.setFull}>Set Full</button> : null}
+          &nbsp;&nbsp;&nbsp;
+          <button className={`button is-danger`} onClick={this.delete}>Delete</button>
         </td>
       </tr>
     )
@@ -299,49 +343,28 @@ class Modals extends React.Component {
 }
 
 @observer
-class LoginSignUpModal extends React.Component {
+class CreateModal extends React.Component {
   state = {
-    showLogin: true
+    duration: '60',
+    style: 'Hatha',
+    instructor: 'Elon Musk',
+    start_at: moment()
   }
 
-  switch = (ev) => {
-    ev.preventDefault()
-
-    this.setState({ showLogin: !this.state.showLogin })
+  handleChange = (date) => {
+    this.setState({
+      start_at: date
+    });
   }
 
-  render() {
-    return (
-      <div>
-        {this.state.showLogin ? <Login switch={this.switch} /> : <SignUp switch={this.switch} />}
-      </div>
-    )
-  }
-}
-
-@observer
-class Login extends React.Component {
-  state = {
-    email: '',
-    password: ''
-  }
-
-  componentDidMount() {
-    store.userError = null
-  }
-
-  changePassword = (ev) => {
-    this.setState({ password: ev.target.value })
-  }
-
-  changeEmail = (ev) => {
-    this.setState({ email: ev.target.value })
+  onChange = (name, value) => {
+    this.setState({ [name]: value })
   }
 
   onSubmit = async (ev) => {
     ev.preventDefault()
 
-    if (await store.login(this.state)) {
+    if (await store.create(this.state)) {
       store.closeModal()
     }
   }
@@ -349,122 +372,69 @@ class Login extends React.Component {
   render() {
     return (
       <div>
-        <h1 className="modal-title">Sign In</h1>
+        <h1 className="modal-title">Creat new Class</h1>
 
-        <h1 className="modal-subtitle">Hello!</h1>
+        <h1 className="modal-subtitle">Yo, WAD students! Let's do some crazy... stuff!</h1>
 
         {store.userError ? <div className="notification is-danger">{store.userError}</div> : null}
+
+        <div className="field">
+          <label className="label">Time and Date</label>
+          <div className="control">
+            <DatePicker
+                selected={this.state.start_at}
+                onChange={this.handleChange}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                dateFormat="LLL"
+                className="input is-medium"
+            />
+          </div>
+        </div>
         
         <div className="field">
-          <label className="label">Email</label>
+          <label className="label">Yoga style</label>
           <div className="control">
-            <input className="input is-medium" type="text" placeholder="bruce@batman.org" value={this.state.email} onChange={this.changeEmail}/>
-            
-            {/* {store.account.errors.name ? <p className="help is-danger">{store.account.errors.name}</p> : null} */}
+            <div className="select full-width">
+              <select onChange={(ev) => this.onChange('style', ev.target.value)} className="full-width" value={this.state.style}>
+                <option value="Hatha">Hatha</option>
+                <option value="Ashtanga">Ashtanga</option>
+                <option value="Vinyasa">Vinyasa</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <div className="field">
-          <label className="label">Password</label>
+          <label className="label">Duration</label>
           <div className="control">
-            <input className="input is-medium" type="password" placeholder="Password" value={this.state.password} onChange={this.changePassword} />
+            <div className="select full-width">
+              <select onChange={(ev) => this.onChange('duration', ev.target.value)} className="full-width" value={this.state.duration}>
+                <option value="60">60</option>
+                <option value="90">90</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="field">
+          <label className="label">Instructor</label>
+          <div className="control">
+            <div className="select full-width">
+              <select onChange={(ev) => this.onChange('instructor', ev.target.value)} className="full-width" value={this.state.instructor}>
+                <option value="Elon Musk">Elon Musk</option>
+                <option value="Richard Branson">Richard Branson</option>
+                <option value="Warren Buffet">Warren Buffet</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <div className="field is-grouped">
           <div className="control">
-            <button className={`button is-info is-medium ${store.userWorking ? ' is-loading' : ''}`} onClick={this.onSubmit}>Sign In</button>
+            <button className={`button is-info is-medium`} onClick={this.onSubmit}>Create</button>
           </div>
-        </div>
-
-        <div className="field">
-          <a href="#" onClick={this.props.switch}>Create an account</a>
-        </div>
-      </div>
-    );
-  }
-}
-
-@observer
-class SignUp extends React.Component {
-  state = {
-    email: '',
-    password: '',
-    errors: {}
-  }
-
-  componentDidMount() {
-    store.userError = null
-  }
-
-  changePassword = (ev) => {
-    this.setState({ password: ev.target.value }, this.validate)
-  }
-
-  changeEmail = (ev) => {
-    this.setState({ email: ev.target.value }, this.validate)
-  }
-  
-  validate = () => {
-    const errors = {}
-
-    if (validator.isEmpty(this.state.email)) {
-      errors.email = "Can't be empty"
-    } else if (!validator.isEmail(this.state.email)) {
-      errors.email = "Not an email"
-    }
-
-    if (validator.isEmpty(this.state.password)) {
-      errors.password = "Can't be empty"
-    } else if (this.state.password.length < 3) {
-      errors.password = "Should be more than 3 characters"
-    }
-
-    this.setState({ errors })
-  }
-
-  onSubmit = async (ev) => {
-    ev.preventDefault()
-
-    if (await store.signup(this.state)) {
-      store.closeModal()
-    }
-  }
-
-  render() {
-    return (
-      <div>
-        <h1 className="modal-title">Sign Up</h1>
-
-        <h1 className="modal-subtitle">Let's create an account, shall we?</h1>
-
-        {store.userError ? <div className="notification is-danger">{store.userError}</div> : null}
-        
-        <div className="field">
-          <label className="label">Email</label>
-          <div className="control">
-            <input className="input is-medium" type="text" placeholder="bruce@batman.org" value={this.state.email} onChange={this.changeEmail}/>
-            
-            {this.state.errors.email ? <p className="help is-danger">{this.state.errors.email}</p> : null}
-          </div>
-        </div>
-
-        <div className="field">
-          <label className="label">Password</label>
-          <div className="control">
-            <input className="input is-medium" type="password" placeholder="Password" value={this.state.password} onChange={this.changePassword} />
-          </div>
-          {this.state.errors.password ? <p className="help is-danger">{this.state.errors.password}</p> : null}
-        </div>
-
-        <div className="field is-grouped">
-          <div className="control">
-            <button className={`button is-info is-medium ${store.userWorking ? ' is-loading' : ''}`} onClick={this.onSubmit}>Sign Up</button>
-          </div>
-        </div>
-
-        <div className="field">
-          <a href="#" onClick={this.props.switch}>Login</a>
         </div>
       </div>
     );
@@ -476,3 +446,11 @@ ReactDOM.render(
   <App />,
   document.getElementById('admin')
 )
+
+function createWeekObject(now) {
+  return {
+    weekStart: DateTime.fromObject({ weekYear: now.weekYear, weekNumber: now.weekNumber, weekday: 1 }).toLocaleString(DateTime.DATE_FULL),
+    weekEnd: DateTime.fromObject({ weekYear: now.weekYear, weekNumber: now.weekNumber, weekday: 7 }).toLocaleString(DateTime.DATE_FULL),
+    days: []
+  }
+}

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "compile": "browserify js/app.js -o public/js/bundle.js -t [ babelify --presets [ env react stage-1 ] --plugins [ transform-decorators-legacy transform-runtime ] ]"
+    "compile": "browserify js/app.js -o public/js/bundle.js -t [ babelify --presets [ env react stage-1 ] --plugins [ transform-decorators-legacy transform-runtime ] ]",
+    "compile-admin": "browserify js/admin.js -o public/js/admin-bundle.js -t [ babelify --presets [ env react stage-1 ] --plugins [ transform-decorators-legacy transform-runtime ] ]"
   },
   "author": "",
   "license": "MIT",
@@ -23,8 +24,10 @@
     "luxon": "^0.3.0",
     "mobx": "^3.4.1",
     "mobx-react": "^4.3.5",
+    "moment": "^2.20.1",
     "mongodb": "^3.0.1",
     "react": "^16.2.0",
+    "react-datepicker": "^1.0.4",
     "react-dom": "^16.2.0",
     "validator": "^9.2.0"
   },

@@ -6,6 +6,10 @@ html, body {
   cursor: pointer;
 }
 
+.full-width {
+  width: 100%;
+}
+
 /* ============================================ */
 /* Intro */
 /* ============================================ */
@@ -105,7 +109,7 @@ html, body {
 }
 
 .full-class {
-  background: #ff386026
+  background: #ff386026 !important;
 }
 
 .loading {

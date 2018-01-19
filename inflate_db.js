@@ -22,6 +22,8 @@ MongoClient.connect(url, async function(err, client) {
 
   await db.collection('classes').remove({})
 
+  const now = DateTime.local()
+
   // Populate courses
   const a = [
     {
@@ -30,7 +32,7 @@ MongoClient.connect(url, async function(err, client) {
       duration: 60,
       is_full: false,
       users: [],
-      start_at: DateTime.fromISO("2018-01-12T09:45").valueOf() 
+      start_at: now.plus({ days: 1 }).set({ hour: 9, minute: 45 }).valueOf() 
     },
     {
       style: 'Vinyasa',
@@ -38,7 +40,7 @@ MongoClient.connect(url, async function(err, client) {
       duration: 90,
       is_full: true,
       users: [],
-      start_at: DateTime.fromISO("2018-01-13T09:45").valueOf() 
+      start_at: now.plus({ day: 1 }).set({ hour: 10, minute: 30 }).valueOf() 
     },
     {
       style: 'Ashtanga',
@@ -46,7 +48,7 @@ MongoClient.connect(url, async function(err, client) {
       duration: 60,
       is_full: false,
       users: [],
-      start_at: DateTime.fromISO("2018-01-13T11:45").valueOf() 
+      start_at: now.plus({ day: 1 }).set({ hour: 11, minute: 45 }).valueOf() 
     },
     {
       style: 'Ashtanga',
@@ -54,7 +56,7 @@ MongoClient.connect(url, async function(err, client) {
       duration: 90,
       is_full: false,
       users: [],
-      start_at: DateTime.fromISO("2018-01-13T15:00").valueOf() 
+      start_at: now.plus({ day: 2 }).set({ hour: 15, minute: 0 }).valueOf() 
     },
     {
       style: 'Ashtanga',
@@ -62,7 +64,7 @@ MongoClient.connect(url, async function(err, client) {
       duration: 90,
       is_full: false,
       users: [],
-      start_at: DateTime.fromISO("2018-01-14T09:45").valueOf() 
+      start_at: now.plus({ day: 2 }).set({ hour: 9, minute: 45 }).valueOf() 
     },
     {
       style: 'Vinyasa',
@@ -70,7 +72,7 @@ MongoClient.connect(url, async function(err, client) {
       duration: 60,
       is_full: false,
       users: [],
-      start_at: DateTime.fromISO("2018-01-15T09:45").valueOf() 
+      start_at: now.plus({ day: 3 }).set({ hour: 9, minute: 45 }).valueOf() 
     }
   ]
   a.forEach(x => {

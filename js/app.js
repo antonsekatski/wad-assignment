@@ -63,6 +63,7 @@ class TimetableStore {
         final.push({...week})
 
         week = createWeekObject(now)
+        weekNumber = now.weekNumber
       }
 
       if (!week.days[now.weekday]) {
@@ -134,7 +135,7 @@ class TimetableStore {
     }
 
     localStorage.setItem('user', JSON.stringify(json))
-    this.user = json.id
+    this.user = json
 
     new Noty({
       type: 'success',

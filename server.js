@@ -12,7 +12,7 @@ const ObjectId = require('mongodb').ObjectID;
 const { DateTime } = require('luxon')
 
 // Connection URL
-const url = 'mongodb://localhost:27017'
+const url = 'mongodb://root:root@localhost:27017/yoga'
 
 // MongoDB database connection
 let db
@@ -164,8 +164,51 @@ app.post('/api/classes/cancel', async (req, res) => {
   res.send({})
 })
 
+// Admin
+app.delete('/api/classes', async (req, res) => {
+  const result = await db.collection('classes')
+  .remove({
+    _id: new ObjectId(req.body.id)
+  })
+
+  res.send({})
+})
+
+app.post('/api/classes/full', async (req, res) => {
+  const result = await db.collection('classes')
+  .update({
+    _id: new ObjectId(req.body.id)
+  }, {
+    $set: {
+      is_full: true
+    }
+  })
+
+  res.send({})
+})
+
+app.post('/api/classes/create', async (req, res) => {
+  const data = req.body
+
+  data.duration = parseInt(data.duration, 10)
+
+  data.start_at = DateTime.fromISO(data.start_at).toLocal().valueOf()
+
+  data.users = []
+
+  const result = await db.collection('classes')
+  .insert(data)
+
+  res.send({})
+})
+
 // Use connect method to connect to the server
 MongoClient.connect(url, function(err, client) {
+  if (err) {
+    console.log(err)
+    return
+  }
+
   app.listen(3000, () => {
     console.log('Server is listening on 127.0.0.1:3000')
   })
