@@ -22,10 +22,17 @@ Then go to the folder and run the following to create testing entities in the da
 node inflate_db.js
 ```
 
-#### Running
+#### Run
+
+Go to the folder and run the following to start a server:
 
 ```
+npm install
 npm run start
 ```
 
 Go to http://localhost:3000/
+
+#### Admin
+
+Go to http://localhost:3000/admin
