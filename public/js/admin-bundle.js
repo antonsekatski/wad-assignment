@@ -327,17 +327,15 @@ var TimetableStore = (_class = function () {
 
                 // this.classes.find(x => x._id === id).is_full = true
 
-                this.classes.forEach(function (week) {
-                  week.days.forEach(function (weekday) {
-                    var elem = weekday.classes.find(function (x) {
-                      return x._id === id;
-                    });
+                // this.classes.forEach(week => {
+                //   week.days.forEach(weekday => {
+                //     const elem = weekday.classes.find(x => x._id === id)
 
-                    if (elem) {
-                      elem.is_full = true;
-                    }
-                  });
-                });
+                //     if (elem) {
+                //       elem.is_full = true
+                //     }
+                //   })
+                // })
 
                 new Noty({
                   type: 'success',
@@ -345,7 +343,7 @@ var TimetableStore = (_class = function () {
                   timeout: 2000
                 }).show();
 
-                // this.fetch()
+                this.fetch();
 
               case 5:
               case 'end':

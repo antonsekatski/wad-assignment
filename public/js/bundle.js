@@ -209,8 +209,6 @@ var TimetableStore = (_class = function () {
                 now = _luxon.DateTime.fromMillis(item.start_at);
 
 
-                console.log(weekNumber, now.weekNumber);
-
                 if (weekNumber !== now.weekNumber) {
                   week.days = week.days.filter(function (x) {
                     return x;
